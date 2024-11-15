@@ -100,6 +100,7 @@ int main(void)
   MX_ADC1_Init();
 
   /* USER CODE BEGIN 2 */
+  HAL_Delay(1000);
   lcd_init();
   //lcd_clear();
   lcd_goto_XY(1, 0);
