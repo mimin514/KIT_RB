@@ -47,7 +47,14 @@ void lcd_init (void) {
 	HAL_Delay(50);
 	lcd_send_cmd (0x02); /* move cursor to home and set data address to 0 */
 	HAL_Delay(50);
+	HAL_Delay(50);
 	lcd_send_cmd (0x80);
+	lcd_goto_XY(1, 5);
+	lcd_send_string("mode:");
+	lcd_goto_XY(0, 0);
+	lcd_send_string("time1:");
+	lcd_goto_XY(0, 9);
+	lcd_send_string("time2:");
 }
 
 void lcd_send_string (char *str)

@@ -9,6 +9,8 @@
 #include "input_processing.h"
 #include "led_display.h"
 #include "i2c-lcd.h"
+#include <stdio.h>
+
 int count=0,cnt=0;
 
 // function blink led
@@ -132,11 +134,23 @@ int green_duration = 5;
 int new_red_duration = 0;
 int new_yellow_duration = 0;
 int new_green_duration = 0;
-
+char str_num11[10];
+char str_num22[10];
+char str_mode[10];
 void timeledlight(){
 	//display2number(num11, num22);
-	lcd_goto_XY(1, 0);
-	lcd_send_string("hehe");
+	sprintf(str_num11, "%d", num11);   // Convert integer to string
+	sprintf(str_num22, "%d", num22); // Convert float to string with 2 decimal places
+	sprintf(str_mode, "%d", mode);
+	// Display on the LCD
+	lcd_goto_XY(1, 11);
+	lcd_send_string(str_mode);
+
+	lcd_goto_XY(0, 6);
+	lcd_send_string(str_num11);
+
+	lcd_goto_XY(0, 15);
+	lcd_send_string(str_num22);
 
 }
 void normalstate(){

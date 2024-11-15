@@ -22,7 +22,10 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "i2c-lcd.h"
-
+#include "input_processing.h"
+#include "input_reading.h"
+#include "scheduler.h"
+#include "led_display.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -32,6 +35,8 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+TIM_HandleTypeDef htim2;
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -43,6 +48,8 @@
 ADC_HandleTypeDef hadc1;
 
 I2C_HandleTypeDef hi2c1;
+
+TIM_HandleTypeDef htim2;
 
 UART_HandleTypeDef huart2;
 
@@ -56,6 +63,7 @@ static void MX_GPIO_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_I2C1_Init(void);
 static void MX_ADC1_Init(void);
+static void MX_TIM2_Init(void);
 /* USER CODE BEGIN PFP */
 ADC_HandleTypeDef hadc1;
 /* USER CODE END PFP */
@@ -65,6 +73,11 @@ ADC_HandleTypeDef hadc1;
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef * hadc){
 
 }
+void HAL_TIM_PeriodElapsedCallback (TIM_HandleTypeDef *htim)
+{
+	  SCH_Update();  // Cập nhật scheduler mỗi 1ms
+
+	}
 /* USER CODE END 0 */
 
 /**
@@ -98,20 +111,27 @@ int main(void)
   MX_USART2_UART_Init();
   MX_I2C1_Init();
   MX_ADC1_Init();
-
+  MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
   lcd_init();
   //lcd_clear();
-  lcd_goto_XY(1, 0);
-  lcd_send_string("hehe");
+  HAL_TIM_Base_Start_IT(&htim2);
+  SCH_Init();
   //HAL_ADC_Start_IT(&hadc1);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+  SCH_Add_Task(timeledlight, 0, 1);
+  SCH_Add_Task(button_reading, 1, 1);
+  SCH_Add_Task(handle_mode, 3, 10);
+  SCH_Add_Task(fsm_for_input_processing, 4, 1);
+//  SCH_Add_Task(timeledlight, 500, 500);
   while (1)
   {
-
+	  SCH_Dispatch_Tasks();
+	  lcd_goto_XY(1, 0);
+	  //lcd_send_string("hehe");
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -246,6 +266,51 @@ static void MX_I2C1_Init(void)
 }
 
 /**
+  * @brief TIM2 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM2_Init(void)
+{
+
+  /* USER CODE BEGIN TIM2_Init 0 */
+
+  /* USER CODE END TIM2_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM2_Init 1 */
+
+  /* USER CODE END TIM2_Init 1 */
+  htim2.Instance = TIM2;
+  htim2.Init.Prescaler = 63999;
+  htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim2.Init.Period = 9;
+  htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim2, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim2, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM2_Init 2 */
+
+  /* USER CODE END TIM2_Init 2 */
+
+}
+
+/**
   * @brief USART2 Initialization Function
   * @param None
   * @retval None
@@ -308,7 +373,40 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(LD2_GPIO_Port, &GPIO_InitStruct);
+  /*Configure GPIO pin Output Level */
+    HAL_GPIO_WritePin(GPIOB, red1_Pin|yellow1_Pin|green1_Pin|red2_Pin
+                            |yellow2_Pin|green2_Pin|EN1_Pin|EN2_Pin
+                            |EN3_Pin|EN4_Pin|mode_Pin|GPIO_PIN_6, GPIO_PIN_RESET);
 
+    HAL_GPIO_WritePin(GPIOC, GPIO_PIN_7, GPIO_PIN_RESET);
+
+    /* Configure GPIO pins for GPIOC: PC7 */
+    GPIO_InitStruct.Pin = GPIO_PIN_7;
+    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+    HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+
+    /* Configure GPIO pins for GPIOB: PB6 */
+    GPIO_InitStruct.Pin = GPIO_PIN_6;
+    HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+    /* Configure other GPIO pins as needed */
+    GPIO_InitStruct.Pin = red1_Pin|yellow1_Pin|green1_Pin|red2_Pin
+                            |yellow2_Pin|green2_Pin|EN1_Pin|EN2_Pin
+                            |EN3_Pin|EN4_Pin|mode_Pin;
+    HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+    /* Configure input pins for buttons */
+    GPIO_InitStruct.Pin = BUTTON_1_Pin|BUTTON_2_Pin;
+    GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+    GPIO_InitStruct.Pull = GPIO_PULLUP;
+    HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+    GPIO_InitStruct.Pin = BUTTON_3_Pin|BUTTON_4_Pin;
+      GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+      GPIO_InitStruct.Pull = GPIO_PULLUP;
+      HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
   /* EXTI interrupt init*/
   HAL_NVIC_SetPriority(EXTI15_10_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
