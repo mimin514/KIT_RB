@@ -1,0 +1,58 @@
+// lcd_i2c.c
+#include "i2c_lcd.h"  // Include the generated I2C header from STM32CubeMX
+
+extern I2C_HandleTypeDef hi2c1; // Use the I2C handle configured in STM32CubeMX
+
+// Send command or data to the LCD
+void lcd_send(uint8_t data, uint8_t mode) {
+    uint8_t highNibble = data & 0xF0;
+    uint8_t lowNibble = (data << 4) & 0xF0;
+    uint8_t dataArr[4] = {
+        highNibble | mode | LCD_BACKLIGHT | LCD_ENABLE,
+        highNibble | mode | LCD_BACKLIGHT,
+        lowNibble | mode | LCD_BACKLIGHT | LCD_ENABLE,
+        lowNibble | mode | LCD_BACKLIGHT
+    };
+    HAL_I2C_Master_Transmit(&hi2c1, LCD_I2C_ADDR, dataArr, 4, HAL_MAX_DELAY);
+    HAL_Delay(1);
+}
+
+// Initialize the LCD
+void lcd_init(void) {
+    HAL_Delay(50);
+    lcd_send(0x03, LCD_COMMAND);
+    HAL_Delay(5);
+    lcd_send(0x03, LCD_COMMAND);
+    HAL_Delay(1);
+    lcd_send(0x03, LCD_COMMAND);
+    lcd_send(0x02, LCD_COMMAND);
+
+    lcd_send(LCD_FUNCTION_SET | 0x08, LCD_COMMAND);
+    lcd_send(LCD_DISPLAY_CONTROL | LCD_DISPLAY_ON, LCD_COMMAND);
+    lcd_send(LCD_CLEAR_DISPLAY, LCD_COMMAND);
+    lcd_send(LCD_ENTRY_MODE_SET | 0x02, LCD_COMMAND);
+}
+
+// Clear the display
+void lcd_clear(void) {
+    lcd_send(LCD_CLEAR_DISPLAY, LCD_COMMAND);
+    HAL_Delay(2);
+}
+
+// Set the cursor position
+void lcd_set_cursor(uint8_t row, uint8_t col) {
+    uint8_t address = (row == 0) ? (col | 0x80) : (col + 0xC0);
+    lcd_send(address, LCD_COMMAND);
+}
+
+// Send a character to the LCD
+void lcd_send_char(char c) {
+    lcd_send(c, LCD_DATA);
+}
+
+// Send a string to the LCD
+void lcd_send_string(char* str) {
+    while (*str) {
+        lcd_send_char(*str++);
+    }
+}

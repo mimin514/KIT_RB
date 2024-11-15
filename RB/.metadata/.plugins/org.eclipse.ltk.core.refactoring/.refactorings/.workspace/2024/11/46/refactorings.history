@@ -1,0 +1,3 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<session version="1.0">&#x0A;<refactoring comment="Delete resource &apos;RB/Core/Src/LCD_I2C.c&apos;" deleteContents="false" description="Delete resource &apos;RB/Core/Src/LCD_I2C.c&apos;" element1="/RB/Core/Src/LCD_I2C.c" flags="7" id="org.eclipse.ltk.core.refactoring.delete.resources" resources="1" stamp="1731654856045"/>&#x0A;<refactoring comment="Delete resource &apos;RB/Core/Inc/LCD_I2C.h&apos;" deleteContents="false" description="Delete resource &apos;RB/Core/Inc/LCD_I2C.h&apos;" element1="/RB/Core/Inc/LCD_I2C.h" flags="7" id="org.eclipse.ltk.core.refactoring.delete.resources" resources="1" stamp="1731654862223"/>
+</session>
